@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Magical Ring Race: Candy Stacker!</title>
+    <style>
+        :root {
+            --bg-color: #f0f4f1;
+            --sky-gradient: linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%);
+            --panel-color: rgba(255, 255, 255, 0.9);
+            --accent-color: #ff7675;
+            --highlight-color: #fdcb6e;
+            --text-color: #2d3436;
+            
+            /* ADJUSTED: Darker crimson red for high contrast against orange */
+            --ring-red: #b30000;
+            --ring-orange: #ff6b12; 
+            --ring-yellow: #fecb00;
+            --ring-green: #1dd1a1;
+            --ring-blue: #54a0ff;
+            --ring-purple: #5f27cd;
+        }
+
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background: var(--sky-gradient);
+            background-size: cover;
+            color: var(--text-color);
+            font-family: 'Comic Sans MS', 'Chalkboard SE', 'Segoe UI', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+            padding: 12px;
+        }
+
+        #game-container {
+            width: 100%;
+            height: 100%;
+            max-width: 950px;
+            max-height: 720px; 
+            background-color: var(--panel-color);
+            border: 6px solid #fff;
+            border-radius: 28px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 15px 35px rgba(161, 196, 253, 0.5);
+            backdrop-filter: blur(10px);
+        }
+
+        .screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            z-index: 10;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        #lobby-screen {
+            display: grid;
+            grid-template-columns: 1.1fr 0.9fr;
+            width: 100%;
+            height: 100%;
+            padding: 40px;
+            gap: 30px;
+            align-items: center;
+        }
+
+        .lobby-left {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        #lobby-screen h1 {
+            font-size: clamp(2.2rem, 5vw, 3.4rem);
+            margin-bottom: 12px;
+            color: #ff6b6b;
+            text-shadow: 3px 3px 0px #fff, 5px 5px 15px rgba(0,0,0,0.1);
+            text-align: left;
+            line-height: 1.1;
+        }
+
+        .btn {
+            background: linear-gradient(to bottom, #ff7675, #ff6b6b);
+            color: #fff;
+            border: 3px solid #fff;
+            padding: 16px 45px;
+            font-size: 1.4rem;
+            font-weight: 900;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: transform 0.1s ease;
+            margin-top: 20px;
+            box-shadow: 0 8px 15px rgba(255, 107, 107, 0.4);
+        }
+
+        .btn:active {
+            transform: scale(0.95);
+        }
+
+        .demo-window {
+            width: 100%;
+            height: 85%;
+            background: rgba(255, 255, 255, 0.6);
+            border: 4px dashed #74b9ff;
+            border-radius: 24px;
+            position: relative;
+            overflow: hidden;
+            display: grid;
+            grid-template-columns: 1fr 75px;
+            padding: 12px;
+            gap: 12px;
+        }
+
+        .demo-pool {
+            background: rgba(255,255,255,0.4);
+            border-radius: 16px;
+            position: relative;
+        }
+
+        .demo-slot {
+            background: #ffeaa7;
+            border: 3px solid #feca57;
+            border-radius: 35px 35px 16px 16px;
+            position: relative;
+            display: flex;
+            flex-direction: column-reverse;
+            align-items: center;
+            padding-bottom: 8px;
+        }
+
+        .d-ring {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            position: absolute;
+            box-shadow: inset -4px -4px 8px rgba(0,0,0,0.2), inset 4px 4px 6px rgba(255,255,255,0.7);
+        }
+
+        .actor-ring {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            position: absolute;
+            background: var(--ring-green);
+            box-shadow: inset -4px -4px 8px rgba(0,0,0,0.2), inset 4px 4px 6px rgba(255,255,255,0.7);
+            left: 25%;
+            top: 40%;
+            z-index: 30;
+            animation: moveRing 1.5s infinite linear;
+        }
+
+        .demo-hand {
+            font-size: 2.3rem;
+            position: absolute;
+            z-index: 40;
+            left: 25%;
+            top: 40%;
+            pointer-events: none;
+            animation: moveHand 1.5s infinite linear;
+        }
+
+        @keyframes moveRing {
+            0%, 15% { left: 25%; top: 40%; opacity: 1; }
+            45% { left: 82%; top: 65%; opacity: 1; }
+            46%, 100% { opacity: 0; }
+        }
+
+        @keyframes moveHand {
+            0% { left: 5%; top: 5%; }
+            15% { left: 27%; top: 44%; }
+            45% { left: 84%; top: 69%; }
+            60%, 100% { left: 5%; top: 5%; }
+        }
+
+        #game-screen {
+            display: grid;
+            grid-template-rows: auto auto 1fr;
+            padding: 16px;
+            gap: 12px;
+        }
+
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            background: #fff;
+            padding: 10px 20px;
+            border-radius: 50px;
+            font-size: 1.1rem;
+            font-weight: bold;
+        }
+
+        .score-p1 { color: #54a0ff; background: #e3efff; padding: 4px 14px; border-radius: 20px; }
+        .score-p2 { color: #ff7675; background: #ffeaea; padding: 4px 14px; border-radius: 20px; }
+
+        .card-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+        }
+
+        .deck-card {
+            background: #fff;
+            border-radius: 20px;
+            padding: 12px 24px;
+            display: flex;
+            gap: 12px;
+            border: 4px solid #fdcb6e;
+            position: relative;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .card-item {
+            width: 55px;
+            height: 85px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            border-radius: 12px;
+            padding: 6px 4px;
+            box-shadow: inset 0 -3px 6px rgba(0,0,0,0.15), 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .card-item .target-number {
+            font-weight: 900;
+            font-size: 1.4rem;
+            color: #2d3436;
+            background: #fff;
+            min-width: 34px;
+            text-align: center;
+            padding: 4px 8px;
+            border-radius: 8px;
+        }
+
+        .workspace {
+            display: grid;
+            grid-template-columns: 1fr 150px;
+            gap: 14px;
+            width: 100%;
+            height: 100%;
+            min-height: 0;
+        }
+
+        .sandbox {
+            background: rgba(255, 255, 255, 0.5);
+            border: 4px dashed #74b9ff;
+            border-radius: 20px;
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+
+        .ring {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            position: absolute;
+            cursor: grab;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: inset -5px -5px 10px rgba(0,0,0,0.22), 
+                        inset 5px 5px 8px rgba(255,255,255,0.7), 
+                        0 4px 8px rgba(0,0,0,0.1);
+            z-index: 20;
+            touch-action: none;
+            will-change: left, top;
+        }
+
+        .ring::after {
+            content: '';
+            position: absolute;
+            top: 6px;
+            left: 8px;
+            width: 10px;
+            height: 6px;
+            background: rgba(255,255,255,0.6);
+            border-radius: 50%;
+            transform: rotate(-15deg);
+        }
+
+        .ring:active {
+            cursor: grabbing;
+            z-index: 100;
+        }
+
+        .r-orange { background: var(--ring-orange); }
+        .r-yellow { background: var(--ring-yellow); }
+        .r-red { background: var(--ring-red); }
+        .r-green { background: var(--ring-green); }
+        .r-blue { background: var(--ring-blue); }
+        .r-purple { background: var(--ring-purple); }
+
+        .submission-panel {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            background: #fff;
+            border-radius: 20px;
+            padding: 10px;
+            border: 3px solid #a1c4fd;
+            height: 100%;
+        }
+
+        .thumb-slot {
+            width: 100%;
+            flex-grow: 1;
+            background: #f7f9fc;
+            border-radius: 40px 40px 14px 14px;
+            border: 3px solid #fdcb6e;
+            margin-bottom: 8px;
+            position: relative;
+            display: flex;
+            flex-direction: column-reverse;
+            align-items: center;
+            padding-bottom: 12px;
+            gap: 4px;
+            overflow: hidden;
+        }
+
+        .thumb-slot::before {
+            content: '⭐ STACK ⭐';
+            position: absolute;
+            top: 10px;
+            font-size: 0.75rem;
+            color: #feca57;
+            font-weight: 900;
+            letter-spacing: 1px;
+            z-index: 5;
+        }
+
+        .thumb-slot .ring {
+            position: relative !important;
+            width: 85%;
+            height: 28px; 
+            border-radius: 12px;
+            box-shadow: inset -3px -3px 6px rgba(0,0,0,0.18), inset 3px 3px 4px rgba(255,255,255,0.5);
+            left: auto !important;
+            top: auto !important;
+            flex-shrink: 0;
+        }
+        
+        .thumb-slot .ring::after {
+            top: 4px;
+            left: 10px;
+            width: 14px;
+            height: 4px;
+        }
+
+        .thumbsup-btn {
+            width: 100%;
+            background: linear-gradient(to bottom, #1dd1a1, #10ac84);
+            color: white;
+            border: 2px solid #fff;
+            padding: 12px 2px;
+            font-size: 1.1rem;
+            font-weight: 900;
+            border-radius: 14px;
+            cursor: pointer;
+            box-shadow: 0 5px 10px rgba(29, 209, 161, 0.3);
+        }
+
+        .thumbsup-btn:active { transform: scale(0.96); }
+
+        #opponent-status {
+            font-size: 0.75rem;
+            color: #b2bec3;
+            text-align: center;
+            margin-top: 4px;
+            font-weight: bold;
+        }
+
+        .alert-banner {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 20px 45px;
+            border-radius: 24px;
+            font-size: 1.8rem;
+            font-weight: 900;
+            z-index: 200;
+            display: none;
+            text-align: center;
+            width: 85%;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+        }
+
+        .alert-win { border: 4px solid #1dd1a1; color: #1dd1a1; }
+        .alert-lose { border: 4px solid #ff7675; color: #ff7675; }
+
+        #gameover-screen h1 {
+            font-size: 3.5rem;
+            margin-bottom: 15px;
+            text-shadow: 3px 3px 0 #fff;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        
+        <div id="lobby-screen" class="screen">
+            <div class="lobby-left">
+                <h1>✨ CANDY<br>STACK RACE!</h1>
+                <p style="color:#6c5ce7; font-size:1.1rem; font-weight:bold; margin-bottom:10px;">Match the magic colors in order!</p>
+                <div id="menu-controls">
+                    <button class="btn" onclick="startMatchmaking()">START PLAYING! 🚀</button>
+                </div>
+            </div>
+
+            <div class="demo-window">
+                <div class="demo-pool">
+                    <div class="d-ring r-red" style="left:15%; top:20%;"></div>
+                    <div class="d-ring r-blue" style="left:55%; top:15%;"></div>
+                    <div class="d-ring r-yellow" style="left:40%; top:65%;"></div>
+                    <div class="d-ring r-purple" style="left:10%; top:60%;"></div>
+                    <div class="d-ring r-orange" style="left:65%; top:50%;"></div>
+                    <div class="actor-ring"></div>
+                </div>
+                <div class="demo-slot">
+                    <div class="d-ring r-red" style="position:static; width:85%; height:22px; border-radius:6px; margin-bottom:2px; opacity:0.9;"></div>
+                </div>
+                <div class="demo-hand">🫱</div>
+            </div>
+        </div>
+
+        <div id="game-screen" class="screen hidden">
+            <div class="top-bar">
+                <div style="color: #6c5ce7; font-weight: 900;">🧁 Candy Arena</div>
+                <div style="display: flex; gap: 15px;">
+                    <span class="score-p1">⭐ You: <span id="p1-score">0</span>/5</span>
+                    <span class="score-p2">🤖 Rival: <span id="p2-score">0</span>/5</span>
+                </div>
+            </div>
+
+            <div class="card-container">
+                <div id="deck-card" class="deck-card"></div>
+            </div>
+
+            <div class="workspace">
+                <div id="sandbox" class="sandbox"></div>
+
+                <div class="submission-panel">
+                    <div id="thumb-slot" class="thumb-slot"></div>
+                    <button class="thumbsup-btn" onclick="evaluateSubmission()">👍 LOCK IN!</button>
+                    <div id="opponent-status">Rival is thinking...</div>
+                </div>
+            </div>
+        </div>
+
+        <div id="gameover-screen" class="screen hidden">
+            <h1 id="end-title" style="margin-bottom: 15px;">MATCH FINISHED</h1>
+            <p id="end-subtitle" style="font-size: 1.3rem; font-weight:bold; color: #6c5ce7; text-align:center;"></p>
+            <button class="btn" style="margin-top: 25px;" onclick="returnToLobby()">PLAY AGAIN! 🔄</button>
+        </div>
+
+        <div id="alert-banner" class="alert-banner">CORRECT!</div>
+    </div>
+
+    <script>
+        const COLOR_POOL = [
+            { id: 'c1', class: 'r-red', hex: '#b30000' },
+            { id: 'c2', class: 'r-orange', hex: '#ff6b12' }, 
+            { id: 'c3', class: 'r-yellow', hex: '#fecb00' }, 
+            { id: 'c4', class: 'r-green', hex: '#1dd1a1' },
+            { id: 'c5', class: 'r-blue', hex: '#54a0ff' },
+            { id: 'c6', class: 'r-purple', hex: '#5f27cd' }
+        ];
+
+        const BOT_PROFILES = ["HappyStacker", "CandyBot", "CookieRacer", "PixelBuddy"];
+
+        let p1Score = 0, p2Score = 0;
+        let currentOpponent = "";
+        let currentTargetSequence = [];
+        let sortedSolutionSequence = [];
+        let playerSelectionStack = [];
+        
+        let activeElement = null;
+        let isDraggingFromSlot = false; 
+        let initialSlotIdx = -1;
+        let startX = 0, startY = 0;
+        let elementLeft = 0, elementTop = 0;
+        
+        let botTimerInstance = null;
+        let isRoundRunning = false;
+
+        const p1ScoreEl = document.getElementById('p1-score');
+        const p2ScoreEl = document.getElementById('p2-score');
+        const lobbyScreenEl = document.getElementById('lobby-screen');
+        const gameScreenEl = document.getElementById('game-screen');
+        const cardDeckViewEl = document.getElementById('deck-card');
+        const sandboxEl = document.getElementById('sandbox');
+        const thumbSlotEl = document.getElementById('thumb-slot');
+        const opponentStatusEl = document.getElementById('opponent-status');
+        const alertBannerEl = document.getElementById('alert-banner');
+
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function emitBeep(frequency, type, duration) {
+            try {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = type;
+                osc.frequency.value = frequency;
+                gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + duration);
+            } catch(e){}
+        }
+
+        function generateSequentialNumbers(count) {
+            let baseArray = [];
+            for (let i = 1; i <= count; i++) {
+                baseArray.push(i);
+            }
+            for (let i = baseArray.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                let temp = baseArray[i];
+                baseArray[i] = baseArray[j];
+                baseArray[j] = temp;
+            }
+            return baseArray;
+        }
+
+        function startMatchmaking() {
+            currentOpponent = BOT_PROFILES[Math.floor(Math.random() * BOT_PROFILES.length)];
+            p1Score = 0; p2Score = 0;
+            p1ScoreEl.innerText = p1Score;
+            p2ScoreEl.innerText = p2Score;
+            lobbyScreenEl.classList.add('hidden');
+            gameScreenEl.classList.remove('hidden');
+            startNewRoundLoop();
+        }
+
+        function startNewRoundLoop() {
+            isRoundRunning = true;
+            playerSelectionStack.length = 0; 
+            renderThumbSlotStack();
+
+            const sequenceLength = Math.floor(Math.random() * 4) + 3; 
+            const sequentialNumbers = generateSequentialNumbers(sequenceLength); 
+
+            currentTargetSequence.length = 0;
+            cardDeckViewEl.innerHTML = '';
+
+            const fragment = document.createDocumentFragment();
+
+            for(let i = 0; i < sequenceLength; i++) {
+                const pickedColor = COLOR_POOL[Math.floor(Math.random() * COLOR_POOL.length)];
+                const itemConfig = {
+                    targetNum: sequentialNumbers[i],
+                    colorClass: pickedColor.class,
+                    colorId: pickedColor.id
+                };
+                currentTargetSequence.push(itemConfig);
+
+                const cardNode = document.createElement('div');
+                cardNode.className = `card-item`;
+                cardNode.style.backgroundColor = pickedColor.hex;
+                cardNode.style.color = "#fff";
+                cardNode.innerHTML = `
+                    <div class="target-number">${itemConfig.targetNum}</div>
+                `;
+                fragment.appendChild(cardNode);
+            }
+            cardDeckViewEl.appendChild(fragment);
+
+            sortedSolutionSequence = [...currentTargetSequence].sort((a, b) => a.targetNum - b.targetNum);
+            populatePlaygroundSandbox();
+            runOpponentSimulationLoop(sequenceLength);
+        }
+
+        function populatePlaygroundSandbox() {
+            sandboxEl.innerHTML = '';
+            const areaWidth = sandboxEl.clientWidth || 600;
+            const areaHeight = sandboxEl.clientHeight || 280;
+            const fragment = document.createDocumentFragment();
+
+            COLOR_POOL.forEach(colorRef => {
+                for(let k = 0; k < 6; k++) {
+                    createRingInSandbox(colorRef, areaWidth, areaHeight, fragment);
+                }
+            });
+            sandboxEl.appendChild(fragment);
+        }
+
+        function createRingInSandbox(colorRef, areaWidth, areaHeight, container) {
+            const ringNode = document.createElement('div');
+            ringNode.className = `ring ${colorRef.class}`;
+            ringNode.dataset.colorId = colorRef.id;
+
+            const xPos = Math.max(6, Math.floor(Math.random() * (areaWidth - 50)));
+            const yPos = Math.max(6, Math.floor(Math.random() * (areaHeight - 50)));
+
+            ringNode.style.left = `${xPos}px`;
+            ringNode.style.top = `${yPos}px`;
+
+            ringNode.addEventListener('mousedown', initiateDrag);
+            ringNode.addEventListener('touchstart', initiateDrag, { passive: false });
+            container.appendChild(ringNode);
+        }
+
+        function initiateDrag(e) {
+            if(!isRoundRunning) return;
+            e.preventDefault();
+            
+            const node = e.currentTarget;
+            const isTouch = e.type.startsWith('touch');
+            const cX = isTouch ? e.touches[0].clientX : e.clientX;
+            const cY = isTouch ? e.touches[0].clientY : e.clientY;
+
+            if(node.dataset.slotIdx !== undefined) {
+                isDraggingFromSlot = true;
+                initialSlotIdx = parseInt(node.dataset.slotIdx);
+                
+                const colorId = node.dataset.colorId;
+                const targetColorObj = COLOR_POOL.find(c => c.id === colorId);
+                
+                activeElement = document.createElement('div');
+                activeElement.className = `ring ${targetColorObj.class}`;
+                activeElement.dataset.colorId = colorId;
+                
+                const sandboxRect = sandboxEl.getBoundingClientRect();
+                elementLeft = cX - sandboxRect.left - 22;
+                elementTop = cY - sandboxRect.top - 22;
+                
+                activeElement.style.left = `${elementLeft}px`;
+                activeElement.style.top = `${elementTop}px`;
+                sandboxEl.appendChild(activeElement);
+            } else {
+                isDraggingFromSlot = false;
+                activeElement = node;
+                elementLeft = parseFloat(activeElement.style.left) || 0;
+                elementTop = parseFloat(activeElement.style.top) || 0;
+            }
+
+            startX = cX;
+            startY = cY;
+
+            window.addEventListener('mousemove', processDrag);
+            window.addEventListener('touchmove', processDrag, { passive: false });
+            window.addEventListener('mouseup', terminateDrag);
+            window.addEventListener('touchend', terminateDrag);
+        }
+
+        function processDrag(e) {
+            if(!activeElement) return;
+            const isTouch = e.type.startsWith('touch');
+            const cX = isTouch ? e.touches[0].clientX : e.clientX;
+            const cY = isTouch ? e.touches[0].clientY : e.clientY;
+            activeElement.style.left = `${elementLeft + (cX - startX)}px`;
+            activeElement.style.top = `${elementTop + (cY - startY)}px`;
+        }
+
+        function terminateDrag(e) {
+            if(!activeElement) return;
+
+            window.removeEventListener('mousemove', processDrag);
+            window.removeEventListener('touchmove', processDrag);
+            window.removeEventListener('mouseup', terminateDrag);
+            window.removeEventListener('touchend', terminateDrag);
+            
+            const slotRect = thumbSlotEl.getBoundingClientRect();
+            const ringRect = activeElement.getBoundingClientRect();
+            const sandboxRect = sandboxEl.getBoundingClientRect();
+
+            const insideSlot = !(
+                ringRect.right < slotRect.left ||
+                ringRect.left > slotRect.right ||
+                ringRect.bottom < slotRect.top ||
+                ringRect.top > slotRect.bottom
+            );
+
+            if (isDraggingFromSlot) {
+                if (!insideSlot) {
+                    playerSelectionStack.splice(initialSlotIdx, 1);
+                    renderThumbSlotStack();
+                    
+                    let x = parseFloat(activeElement.style.left);
+                    let y = parseFloat(activeElement.style.top);
+                    if (x < 0 || x > sandboxRect.width - 44 || y < 0 || y > sandboxRect.height - 44) {
+                        activeElement.style.left = `${Math.max(6, Math.floor(Math.random() * (sandboxRect.width - 50)))}px`;
+                        activeElement.style.top = `${Math.max(6, Math.floor(Math.random() * (sandboxRect.height - 50)))}px`;
+                    }
+                    
+                    activeElement.addEventListener('mousedown', initiateDrag);
+                    activeElement.addEventListener('touchstart', initiateDrag, { passive: false });
+                } else {
+                    activeElement.remove();
+                }
+            } else {
+                if(insideSlot) {
+                    playerSelectionStack.push({ colorId: activeElement.dataset.colorId });
+                    activeElement.remove();
+                    renderThumbSlotStack();
+                    emitBeep(650, 'triangle', 0.03);
+                } else {
+                    let x = parseFloat(activeElement.style.left);
+                    let y = parseFloat(activeElement.style.top);
+                    if (x < 0 || x > sandboxRect.width - 44 || y < 0 || y > sandboxRect.height - 44) {
+                        activeElement.style.left = `${Math.max(6, Math.floor(Math.random() * (sandboxRect.width - 50)))}px`;
+                        activeElement.style.top = `${Math.max(6, Math.floor(Math.random() * (sandboxRect.height - 50)))}px`;
+                    }
+                }
+            }
+            activeElement = null;
+            isDraggingFromSlot = false;
+        }
+
+        function renderThumbSlotStack() {
+            thumbSlotEl.innerHTML = '';
+            const fragment = document.createDocumentFragment();
+            playerSelectionStack.forEach((entry, idx) => {
+                const targetColorObj = COLOR_POOL.find(c => c.id === entry.colorId);
+                const visualNode = document.createElement('div');
+                visualNode.className = `ring ${targetColorObj.class}`;
+                visualNode.dataset.colorId = entry.colorId;
+                visualNode.dataset.slotIdx = idx;
+                
+                visualNode.addEventListener('mousedown', initiateDrag);
+                visualNode.addEventListener('touchstart', initiateDrag, { passive: false });
+                
+                fragment.appendChild(visualNode);
+            });
+            thumbSlotEl.appendChild(fragment);
+        }
+
+        function runOpponentSimulationLoop(currentSequenceLength) {
+            if(botTimerInstance) clearTimeout(botTimerInstance);
+            opponentStatusEl.innerText = `${currentOpponent} is working...`;
+
+            const baseTime = currentSequenceLength * 3500;
+            const computedDelay = baseTime + (Math.random() * 4000);
+
+            botTimerInstance = setTimeout(() => {
+                if(!isRoundRunning) return;
+                isRoundRunning = false;
+                p2Score++;
+                p2ScoreEl.innerText = p2Score;
+                displayOverlayNotification(`⏰ ${currentOpponent} finished first!`, 'alert-lose');
+                evaluateMatchTiersEndCondition();
+            }, computedDelay);
+        }
+
+        function evaluateSubmission() {
+            if(!isRoundRunning) return;
+
+            if(playerSelectionStack.length !== sortedSolutionSequence.length) {
+                displayOverlayNotification("Oops! Your stack size doesn't match!", "alert-lose");
+                return;
+            }
+
+            let validationPass = true;
+            for(let i = 0; i < sortedSolutionSequence.length; i++) {
+                if(playerSelectionStack[i].colorId !== sortedSolutionSequence[i].colorId) {
+                    validationPass = false;
+                    break;
+                }
+            }
+
+            if(validationPass) {
+                clearTimeout(botTimerInstance);
+                isRoundRunning = false;
+                p1Score++;
+                p1ScoreEl.innerText = p1Score;
+                emitBeep(950, 'sine', 0.15);
+                displayOverlayNotification("✨ AWESOME! +1 POINT ✨", "alert-win");
+                evaluateMatchTiersEndCondition();
+            } else {
+                displayOverlayNotification("Check the numbers carefully!", "alert-lose");
+            }
+        }
+
+        function displayOverlayNotification(msg, typeClass) {
+            alertBannerEl.innerText = msg;
+            alertBannerEl.className = `alert-banner ${typeClass}`;
+            alertBannerEl.style.display = 'block';
+            setTimeout(() => { alertBannerEl.style.display = 'none'; }, 700);
+        }
+
+        function evaluateMatchTiersEndCondition() {
+            setTimeout(() => {
+                if(p1Score >= 5) concludeSession(true);
+                else if(p2Score >= 5) concludeSession(false);
+                else startNewRoundLoop();
+            }, 600);
+        }
+
+        function concludeSession(userWonMatch) {
+            gameScreenEl.classList.add('hidden');
+            const endScreen = document.getElementById('gameover-screen');
+            endScreen.classList.remove('hidden');
+            const title = document.getElementById('end-title');
+            const subtitle = document.getElementById('end-subtitle');
+
+            if(userWonMatch) {
+                title.innerText = "⭐ YOU WIN! ⭐";
+                title.style.color = "#1dd1a1";
+                subtitle.innerText = `Great job! You beat ${currentOpponent}!`;
+            } else {
+                title.innerText = "Nice Try! 🌈";
+                title.style.color = "#ff7675";
+                subtitle.innerText = `${currentOpponent} won this time. Let's try again!`;
+            }
+        }
+
+        function returnToLobby() {
+            document.getElementById('gameover-screen').classList.add('hidden');
+            lobbyScreenEl.classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>
